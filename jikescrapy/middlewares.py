@@ -3,7 +3,7 @@ from .settings import REDIS_CONFIG, REDIS_KEYS
 import redis
 import requests
 import json
-from jike import JIKE
+import time
 
 
 class JikescrapyDownloadMiddleware(object):
@@ -50,5 +50,6 @@ class JikescrapyDownloadMiddleware(object):
             return request
 
         if spider.name == 'jike_fan' and not json.loads(response.text).get('success'):
-            return requests
+            spider.logger.info('关注失败 {}'.format(response.text))
+            return request
         return response
