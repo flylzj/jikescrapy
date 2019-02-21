@@ -49,6 +49,6 @@ class JikescrapyDownloadMiddleware(object):
                 spider.logger.error('刷新token失败,请重新登录')
             return request
 
-        if spider.name == 'jike_fan' and not json.loads(response.body).get('success'):
+        if spider.name == 'jike_fan' and not json.loads(response.text).get('success'):
             return requests
         return response

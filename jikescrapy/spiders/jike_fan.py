@@ -43,7 +43,7 @@ class JikeFanSpider(scrapy.Spider):
         )
 
     def follow(self, response):
-        result = json.loads(response.body)
+        result = json.loads(response.text)
         meta = response.meta
         if result.get('success'):
             self.logger.info('follow user {} success'.format(meta.get('username')))

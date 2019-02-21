@@ -69,7 +69,7 @@ class JikeSpider(scrapy.Spider):
 
     def get_relation_person(self, response):
         meta = response.meta
-        data = json.loads(response.body)
+        data = json.loads(response.text)
         for d in data.get('data'):
             jike_item = JikescrapyItem()
             for key in jike_item.fields:
