@@ -9,10 +9,11 @@ from jike import JIKE
 
 class JikeFanSpider(scrapy.Spider):
     custom_settings = {
-        "DOWNLOAD_DELAY": 10
+        "DOWNLOAD_DELAY": 3600,
     }
     name = 'jike_fan'
-    rds = redis.Redis(**REDIS_CONFIG)
+    pool = redis.ConnectionPool(**REDIS_CONFIG)
+    rds = redis.StrictRedis(connection_pool=pool)
     follow_api = 'https://app.jike.ruguoapp.com/1.0/userRelation/follow'
     unfollow_api = 'https://app.jike.ruguoapp.com/1.0/userRelation/unfollow'
     father_username = '6ef2cacc-f140-4e75-a60c-686808ef7c2b'

@@ -9,7 +9,8 @@ class MyGraph(object):
     def __init__(self):
         self.graph = Graph('bolt://localhost:7687', user='neo4j', password='lzjlzj123')
         self.mather = NodeMatcher(self.graph)
-        self.rds = redis.Redis(**REDIS_CONFIG)
+        pool = redis.ConnectionPool(**REDIS_CONFIG)
+        self.rds = redis.StrictRedis(connection_pool=pool)
         self.username, self.screenName = self.get_main_user_info()
         self.user_info = {
             "username": self.username,
@@ -18,14 +19,19 @@ class MyGraph(object):
         self.node_name = 'JIKE_user'
 
     def get_main_user_info(self):
-        return self.rds.hget(REDIS_KEYS.get('user_info_key'), 'username'),\
-               self.rds.hget(REDIS_KEYS.get('user_info_key'), 'screenName')
+        # return self.rds.hget(REDIS_KEYS.get('user_info_key'), 'username'),\
+        #        self.rds.hget(REDIS_KEYS.get('user_info_key'), 'screenName')
+        return '82D23B32-CF36-4C59-AD6F-D05E3552CBF3', '瓦恁'
 
     def get_followers(self, username):
         follower_key = REDIS_KEYS.get('follower_key').format(username)
         followers = self.rds.hgetall(follower_key)
         for k, v in followers.items():
+            print(k)
             yield k, eval(v)
+
+    def dump_key(self, follower_key):
+        self.rds.dump(follower_key)
 
     def flush(self):
         self.graph.delete_all()

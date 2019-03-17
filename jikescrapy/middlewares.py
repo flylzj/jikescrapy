@@ -2,15 +2,14 @@
 from .settings import REDIS_CONFIG, REDIS_KEYS
 import redis
 import requests
-import json
-import time
 from jike import JIKE
 import logging
 
 
 class JikescrapyDownloadMiddleware(object):
     def __init__(self):
-        self.rds = redis.Redis(**REDIS_CONFIG)
+        pool = redis.ConnectionPool(**REDIS_CONFIG)
+        self.rds = redis.StrictRedis(connection_pool=pool)
         self.jike = JIKE()
         self.token = self.jike.token
         self.profile = self.jike.profile

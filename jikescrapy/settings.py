@@ -6,11 +6,13 @@ REDIS_KEYS = {
     "jike_users_key": "jike_users",
     "crawling_user_key": "crawling_user",
     "robot_following_key": "robot_following",
-    "user_info_key": "user_info"
+    "user_info_key": "user_info",
+    "user_info_hash_key": "{}_user_info",
+    "more_key_key": "jike_more_key",
+    "user_more_key": "{}_more_key",
+    "finished_user": "finished_user"
 }
 
-
-MYSQL_URI = 'mysql+pymysql://jike:jike123@gz-cdb-h25tz5ek.sql.tencentcdb.com:62581/jike'
 
 REDIS_CONFIG = {
     "host": "139.199.66.15",
@@ -27,7 +29,7 @@ LOG_LEVEL = 'INFO'
 
 FEED_EXPORT_ENCODING = 'utf-8'
 
-# DOWNLOAD_DELAY = 0.5  # 相同域名下载延时
+DOWNLOAD_DELAY = 0.1  # 相同域名下载延时
 
 SPIDER_MODULES = ['jikescrapy.spiders']
 NEWSPIDER_MODULE = 'jikescrapy.spiders'
@@ -39,5 +41,7 @@ DEFAULT_REQUEST_HEADERS = {
 }
 
 DOWNLOADER_MIDDLEWARES = {
-   'jikescrapy.middlewares.JikescrapyDownloadMiddleware': 543,
+    'jikescrapy.middlewares.JikescrapyDownloadMiddleware': 543,
 }
+
+START_USERNAME = '82D23B32-CF36-4C59-AD6F-D05E3552CBF3'
