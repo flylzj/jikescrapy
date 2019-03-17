@@ -22,3 +22,6 @@ class JikescrapyPipeline(object):
                 p.hsetnx(user_info_hash_key.format(item.get('username')), k, str(v))
                 p.execute()
         return item
+
+    def close_spider(spider):
+        pass

@@ -1,8 +1,24 @@
 # coding: utf-8
-from jikescrapy.settings import REDIS_CONFIG, REDIS_KEYS
+from jikescrapy.settings import REDIS_CONFIG, REDIS_KEYS, START_USERNAME, MYSQL_URI
 import redis
 from py2neo import Database, Graph, NodeMatcher
 from py2neo.data import Node, Relationship
+from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy import create_engine
+import time
+from model import JikeUser
+from threading import Thread
+from queue import Queue
+
+
+REDIS_CONFIG_ALI = {
+    "host": "120.24.66.220",
+    "port": "6379",
+    'password': 'lzjlzj123',
+    "db": 0,
+    "decode_responses": True,
+    "encoding": "utf-8"
+}
 
 
 class MyGraph(object):
@@ -27,7 +43,6 @@ class MyGraph(object):
         follower_key = REDIS_KEYS.get('follower_key').format(username)
         followers = self.rds.hgetall(follower_key)
         for k, v in followers.items():
-            print(k)
             yield k, eval(v)
 
     def dump_key(self, follower_key):
@@ -67,10 +82,123 @@ class MyGraph(object):
             )
 
 
+class MyRedis(object):
+    def __init__(self):
+        pool = redis.ConnectionPool(**REDIS_CONFIG_ALI)
+        self.rds = redis.StrictRedis(connection_pool=pool)
+
+    def get_follower(self, username):
+        follower_key = REDIS_KEYS.get('follower_key').format(username)
+        followers = self.rds.smembers(follower_key)
+        for follower in followers:
+            yield follower
+
+    def get_info(self, username):
+        user_info_hash_key = REDIS_KEYS.get("user_info_hash_key").format(username)
+        return self.rds.hgetall(user_info_hash_key)
+
+
+class MyMysql(object):
+    def __init__(self):
+        engine = create_engine(MYSQL_URI)
+        self.Session = sessionmaker(bind=engine)
+        self.Scoped_session = sessionmaker(bind=engine)
+
+    @staticmethod
+    def convert_time(time_str):
+        try:
+            return int(time.mktime(time.strptime(time_str.split('.')[0], '%Y-%m-%dT%H:%M:%S')))
+        except Exception as e:
+            return 0
+
+    def dom_user_info(self, user_info):
+        jike_user = JikeUser(
+            username=user_info.get("username"),
+            briefIntro=user_info.get("briefIntro"),
+            city=user_info.get('city'),
+            country=user_info.get('country'),
+            createdAt=user_info.get('createdAt'),
+            create_at_int=self.convert_time(user_info.get('createdAt')),
+            gender=user_info.get('gender'),
+            isVerified=user_info.get('isVerified'),
+            profileImageUrl=user_info.get('profileImageUrl'),
+            province=user_info.get('province'),
+            ref=user_info.get('ref'),
+            screenName=user_info.get('screenName'),
+            updatedAt=user_info.get('updatedAt'),
+            update_at_int=self.convert_time(user_info.get('update_at_int')),
+            verifyMessage=user_info.get('verifyMessage')
+        )
+        try:
+            session = self.Session()
+            session.add(jike_user)
+            session.commit()
+        except Exception as e:
+            print(e)
+
+    def dom_info_thread(self, user_info):
+        if self.search_info(user_info.get("username")):
+            return
+        jike_user = JikeUser(
+            username=user_info.get("username"),
+            briefIntro=user_info.get("briefIntro"),
+            city=user_info.get('city'),
+            country=user_info.get('country'),
+            createdAt=user_info.get('createdAt'),
+            create_at_int=self.convert_time(user_info.get('createdAt')),
+            gender=user_info.get('gender'),
+            isVerified=user_info.get('isVerified'),
+            profileImageUrl=user_info.get('profileImageUrl'),
+            province=user_info.get('province'),
+            ref=user_info.get('ref'),
+            screenName=user_info.get('screenName'),
+            updatedAt=user_info.get('updatedAt'),
+            update_at_int=self.convert_time(user_info.get('update_at_int')),
+            verifyMessage=user_info.get('verifyMessage')
+        )
+        try:
+            session = self.Scoped_session()
+            session.add(jike_user)
+            session.commit()
+        except Exception as e:
+            return user_info.get("username")
+
+    def search_info(self, username):
+        session = self.Scoped_session()
+        user = session.query(JikeUser).filter_by(
+            username=username
+        ).first()
+        return user
+
+    def dom_info_with_queue(self, follower_queue):
+        while not follower_queue.empty():
+            print("now queue size {}".format(follower_queue.qsize()))
+            info = follower_queue.get()
+            self.dom_info_thread(info)
+
+
 if __name__ == '__main__':
-    mg = MyGraph()
-    # print(mg.mather.match('JIKE_user', name='flythief'))
-    # mg.flush()
-    mg.dump()
+    mr = MyRedis()
+    # mm = MyMysql()
+    # follower_queue = Queue()
+    count = 0
+    for follower in mr.get_follower(START_USERNAME):
+        # follower_queue.put(mr.get_info(follower))
+        mr.rds.sadd('jike_users', follower)
+        for sec_follower in mr.get_follower(follower):
+            mr.rds.sadd('jike_uesrs', sec_follower)
+            # follower_queue.put(mr.get_info(sec_follower))
+            count += 1
+    print(count)
+
+    # print("now queue size {}".format(follower_queue.qsize()))
+
+    # for i in range(10):
+    #     t = Thread(target=mm.dom_info_with_queue, args=(follower_queue, ))
+    #     t.start()
+    #
+    # while not follower_queue.empty():
+    #     continue
+
 
 

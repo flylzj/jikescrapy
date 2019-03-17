@@ -13,6 +13,16 @@ REDIS_KEYS = {
     "finished_user": "finished_user"
 }
 
+mysql_config = {
+    "username": "jike",
+    "password": "jike123123",
+    "host": "gz-cdb-h25tz5ek.sql.tencentcdb.com",
+    "port": "62581",
+    "database": "jike"
+}
+
+MYSQL_URI = 'mysql+pymysql://{username}:{password}@{host}:{port}/{database}'.format(**mysql_config)
+
 
 REDIS_CONFIG = {
     "host": "139.199.66.15",
