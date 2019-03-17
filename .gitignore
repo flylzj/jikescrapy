@@ -1,6 +1,6 @@
 .idea
 venv
-
+tmp
 __pycache__
 *.pyc
 *.pickle

@@ -43,30 +43,6 @@ class JikeSpider(scrapy.Spider):
             meta={'type': 'following_key', 'api': self.following_api, 'username': self.start_username}
         )
 
-    def get_personal_relation(self, username):
-        self.logger.info('start crawl user: {}'.format(username))
-        data = {
-            "loadMoreKey": None,
-            "username": username,
-            "limit": 20
-        }
-        yield scrapy.Request(
-            self.follower_api,
-            method='POST',
-            body=json.dumps(data),
-            headers={'Content-Type': 'application/json'},
-            callback=self.get_relation_person,
-            meta={'type': 'follower_key', 'api': self.follower_api, 'username': username}
-        )
-        yield scrapy.Request(
-            self.following_api,
-            method='POST',
-            body=json.dumps(data),
-            headers={'Content-Type': 'application/json'},
-            callback=self.get_relation_person,
-            meta={'type': 'following_key', 'api': self.following_api, 'username': username}
-        )
-
     def get_relation_person(self, response):
         meta = response.meta
         data = json.loads(response.text)

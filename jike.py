@@ -2,6 +2,7 @@
 import requests
 import pickle
 import qrcode
+import logging
 
 
 def make_qrcode(api):
@@ -36,21 +37,21 @@ class JIKELoginer(object):
     def jike_login(self):
         self.token = self.load_token_from_file()
         if not self.token:
-            print('重新扫码登录')
+            logging.info('重新扫码登录')
             self.login()
         else:
-            print('从文件中加载token成功, 正在验证token是否过期')
+            logging.info('从文件中加载token成功, 正在验证token是否过期')
             if not self.get_profile():
-                print('token过期, 正在刷新token')
+                logging.info('token过期, 正在刷新token')
                 token = self.refresh_token()
                 if not token:
-                    print('刷新token失败\n正在尝试重新扫码登录')
+                    logging.warning('刷新token失败\n正在尝试重新扫码登录')
                     self.login()
                 else:
-                    print('刷新token成功')
+                    logging.info('刷新token成功')
                     self.token = token
                     self.get_profile()
-        print('登陆成功, 登录用户名为: {} 昵称为: {}'.format(
+        logging.info('登陆成功, 登录用户名为: {} 昵称为: {}'.format(
             self.profile.get("user").get("username"),
             self.profile.get("user").get("screenName")
         ))
@@ -73,7 +74,7 @@ class JIKELoginer(object):
             with open('token.pickle', 'rb') as f:
                 return pickle.load(f)
         except Exception as e:
-            print('获取token失败 {}'.format(e))
+            logging.info('获取token失败 {}'.format(e))
             return None
 
     def dump_token_to_file(self):
@@ -82,7 +83,7 @@ class JIKELoginer(object):
                 pickle.dump(self.token, f)
                 return True
         except Exception as e:
-            print('保存token失败, {}'.format(e))
+            logging.info('保存token失败, {}'.format(e))
             return False
 
     def make_token_headers(self):
@@ -99,12 +100,12 @@ class JIKELoginer(object):
             r = requests.get(self.session_api, headers=self.headers)
             return r.json().get("uuid")
         except Exception as e:
-            print('get uuid error', e)
+            logging.info('get uuid error', e)
             return None
 
     def wait_for_login(self, uuid):
         try:
-            print('start get', uuid)
+            logging.info('start get {}'.format(uuid))
             r = requests.get(self.wait_for_login_api.format(uuid), headers=self.headers, timeout=20)
             return r.json().get("logged_in")
         except Exception as e:
@@ -121,16 +122,16 @@ class JIKELoginer(object):
         uuid = self.get_uuid()
         if not uuid:
             return
-        print("获取uuid成功, 等待扫码")
+        logging.info("获取uuid成功, 等待扫码")
         make_qrcode(self.qrcode_api.format(uuid))
         if not self.wait_for_login(uuid):
             return
-        print("扫码成功,等待验证")
+        logging.info("扫码成功,等待验证")
         self.token = self.wait_for_confirmation(uuid)
         if not self.token:
             exit(1)
-        print('登录成功')
-        self.profile = self.get_profile()
+        logging.info('登录成功')
+        self.get_profile()
         self.dump_token_to_file()
 
     def get_profile(self):
@@ -139,7 +140,7 @@ class JIKELoginer(object):
             self.profile = r.json()
             return r.json().get("user")
         except Exception as e:
-            print('获取个人信息失败, {}'.format(e))
+            logging.info('获取个人信息失败, {}'.format(e))
             return
 
 
@@ -159,10 +160,10 @@ class JIKE(JIKELoginer):
                 "username": username
             }
             r = requests.post(api, headers=self.make_token_headers(), json=data)
-            print(r.text)
+            logging.info(r.text)
             return r.json().get('success')
         except Exception as e:
-            print('change follow status', e)
+            logging.info('change follow status', e)
             return False
 
     def get_follower(self, username, more_key=None):
@@ -176,7 +177,7 @@ class JIKE(JIKELoginer):
             r = requests.post(self.follower_api, headers=self.make_token_headers(), json=data)
             return r.json()
         except Exception as e:
-            print('get_follower error', e)
+            logging.info('get_follower error', e)
             return None
 
     def get_all_followers(self, username):
@@ -199,20 +200,20 @@ class JIKE(JIKELoginer):
             r = requests.post(self.subscribed_list_api, headers=self.make_token_headers(), json=data)
             datas = r.json().get("data")
             for data in datas:
-                print(
-                    data.get('id'),
-                    data.get('type'),
-                    data.get('messagePrefix'),
-                    data.get("topicId"),
-                    data.get("briefIntro")
-                )
+                # print(
+                #     data.get('id'),
+                #     data.get('type'),
+                #     data.get('messagePrefix'),
+                #     data.get("topicId"),
+                #     data.get("briefIntro")
+                # )
                 if self.change_subscribed_status(data.get("id")):
-                    print('退出圈子{}成功'.format(data.get("messagePrefix")))
+                    logging.info('退出圈子{}成功'.format(data.get("messagePrefix")))
                 else:
-                    print('退出圈子{}失败'.format(data.get("messagePrefix")))
+                    logging.info('退出圈子{}失败'.format(data.get("messagePrefix")))
             return r.json().get("loadMoreKey")
         except Exception as e:
-            print(e)
+            logging.info(e)
 
     def change_subscribed_status(self, topic_id):
         try:
@@ -222,10 +223,10 @@ class JIKE(JIKELoginer):
                 "push": False
             }
             r = requests.post(self.subscribed_status_api, headers=self.make_token_headers(), json=data)
-            print(r.json())
+            logging.info(r.json())
             return r.json().get("success")
         except Exception as e:
-            print('change_subscribed_status error, {}'.format(e))
+            logging.info('change_subscribed_status error, {}'.format(e))
             return None
 
 

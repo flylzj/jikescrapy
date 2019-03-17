@@ -4,17 +4,25 @@ import redis
 import requests
 import json
 import time
+from jike import JIKE
+import logging
 
 
 class JikescrapyDownloadMiddleware(object):
     def __init__(self):
         self.rds = redis.Redis(**REDIS_CONFIG)
-        self.token = None
-        # self.jike = JIKE()
-        # if not self.jike.token:
-        #     pass
-        # else:
-        #     self.rds.set(REDIS_KEYS.get("token_key"), str(self.jike.token))
+        self.jike = JIKE()
+        self.token = self.jike.token
+        self.profile = self.jike.profile
+        self.load_user_info()
+
+    def load_user_info(self):
+        logging.info('正在加载user info')
+        keys = ['username', 'screenName', 'briefIntro', 'id']
+        user_info_key = REDIS_KEYS.get('user_info_key')
+        for k, v in self.profile.get('user').items():
+            if k in keys:
+                self.rds.hsetnx(user_info_key, k, v)
 
     def refresh_token(self):
         try:
@@ -29,12 +37,12 @@ class JikescrapyDownloadMiddleware(object):
             refresh_token_api = 'https://app.jike.ruguoapp.com/app_auth_tokens.refresh'
             r = requests.get(refresh_token_api, headers=headers)
             self.token = r.json()
+            return True
         except Exception as e:
             self.token = None
+            return False
 
     def process_request(self, request, spider):
-        if not self.token:
-            self.token = eval(self.rds.get(REDIS_KEYS.get("token_key")))
         request.headers.update(
             {
                 "x-jike-access-token": self.token.get("x-jike-access-token")
@@ -42,14 +50,11 @@ class JikescrapyDownloadMiddleware(object):
         )
 
     def process_response(self, request, response, spider):
-        if response.status == 401:
+        if response.status != 200:
             spider.logger.info('token过期,正在尝试刷新token')
             self.refresh_token()
             if not self.token:
                 spider.logger.error('刷新token失败,请重新登录')
-            return request
-
-        if spider.name == 'jike_fan' and not json.loads(response.text).get('success'):
-            spider.logger.info('关注失败 {}'.format(response.text))
+                spider.close(spider, 'login error')
             return request
         return response
