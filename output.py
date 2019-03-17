@@ -170,13 +170,16 @@ if __name__ == '__main__':
     # mm = MyMysql()
     # follower_queue = Queue()
     count = 0
+    pipe = mr.rds.pipeline()
     for follower in mr.get_follower(START_USERNAME):
         # follower_queue.put(mr.get_info(follower))
-        mr.rds.sadd('jike_users', follower)
+        pipe.sadd('jike_users', follower)
+        count += 1
         for sec_follower in mr.get_follower(follower):
-            mr.rds.sadd('jike_uesrs', sec_follower)
+            pipe.sadd('jike_uesrs', sec_follower)
             # follower_queue.put(mr.get_info(sec_follower))
             count += 1
+    pipe.execute()
     print(count)
 
     # print("now queue size {}".format(follower_queue.qsize()))

@@ -39,7 +39,7 @@ LOG_LEVEL = 'INFO'
 
 FEED_EXPORT_ENCODING = 'utf-8'
 
-DOWNLOAD_DELAY = 0.1  # 相同域名下载延时
+DOWNLOAD_DELAY = 0.5  # 相同域名下载延时
 
 SPIDER_MODULES = ['jikescrapy.spiders']
 NEWSPIDER_MODULE = 'jikescrapy.spiders'
@@ -54,4 +54,4 @@ DOWNLOADER_MIDDLEWARES = {
     'jikescrapy.middlewares.JikescrapyDownloadMiddleware': 543,
 }
 
-START_USERNAME = '82D23B32-CF36-4C59-AD6F-D05E3552CBF3'
+START_USERNAME = None  # '82D23B32-CF36-4C59-AD6F-D05E3552CBF3'
