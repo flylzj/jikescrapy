@@ -7,18 +7,6 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
 import time
 from model import JikeUser
-from threading import Thread
-from queue import Queue
-
-
-REDIS_CONFIG_ALI = {
-    "host": "120.24.66.220",
-    "port": "6379",
-    'password': 'lzjlzj123',
-    "db": 0,
-    "decode_responses": True,
-    "encoding": "utf-8"
-}
 
 
 class MyGraph(object):
@@ -84,7 +72,7 @@ class MyGraph(object):
 
 class MyRedis(object):
     def __init__(self):
-        pool = redis.ConnectionPool(**REDIS_CONFIG_ALI)
+        pool = redis.ConnectionPool(**REDIS_CONFIG)
         self.rds = redis.StrictRedis(connection_pool=pool)
 
     def get_follower(self, username):

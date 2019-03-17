@@ -25,7 +25,7 @@ MYSQL_URI = 'mysql+pymysql://{username}:{password}@{host}:{port}/{database}'.for
 
 
 REDIS_CONFIG = {
-    "host": "139.199.66.15",
+    "host": "120.24.66.220",
     "port": "6379",
     'password': 'lzjlzj123',
     "db": 0,
