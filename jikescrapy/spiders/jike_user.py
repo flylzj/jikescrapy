@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import scrapy
 import redis
-from ..settings import REDIS_KEYS, REDIS_CONFIG, START_USERNAME
+from ..settings import REDIS_KEYS, REDIS_CONFIG, START_USERNAME, JIKE_DEPTH
 import json
 from ..items import JikeUserItem
 
@@ -78,7 +78,7 @@ class JikeUserSpider(scrapy.Spider):
             jike_user_item['follow_key'] = follow_key
             yield jike_user_item
             # self.logger.info('get {} for {}'.format(f_username, meta.get('username')))
-            if meta.get('d') < 2:
+            if meta.get('d') < JIKE_DEPTH:
                 d = meta.get('d')
                 d += 1
                 post_data = {

@@ -35,6 +35,7 @@ class JikescrapyPipeline(object):
         #     for k, v in self.get_dict_items(item):
         #         p.hsetnx(user_info_hash_key.format(item.get('username')), k, str(v))
         #         p.execute()
+        self.rds.sadd(item.get('follow_key'), item.get('username'))
         session = self.Session()
         if session.query(JikeUser).filter_by(
             username=item.get("username")
