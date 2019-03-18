@@ -5,8 +5,8 @@ from py2neo import Database, Graph, NodeMatcher
 from py2neo.data import Node, Relationship
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
-import time
 from model import JikeUser
+import time
 
 
 class MyGraph(object):
@@ -83,11 +83,33 @@ class MyRedis(object):
 
     def get_info(self, username):
         user_info_hash_key = REDIS_KEYS.get("user_info_hash_key").format(username)
-        return self.rds.hgetall(user_info_hash_key)
+        user_info = self.rds.hgetall(user_info_hash_key)
+        return user_info
 
-    def get_all_user_info(self):
-        for user in self.rds.keys(r'*user_info'):
-            yield self.rds.hgetall(user)
+    def get_all_username(self):
+        cur = self.load_cur()
+        print(cur)
+        cur, results = self.rds.scan(cur, match='*user_info', count=10)
+        yield [self.get_info(username.strip("_user_info")) for username in results]
+        while cur != 0:
+            self.dom_cur(cur)
+            cur, results = self.rds.scan(cur, match='*user_info', count=10)
+            results = [self.get_info(username.strip("_user_info")) for username in results]
+            yield [result for result in results if result]
+
+    @staticmethod
+    def dom_cur(cur):
+        with open('cur', 'w') as f:
+            f.write(str(cur))
+
+    @staticmethod
+    def load_cur():
+        try:
+            with open('cur') as f:
+                return int(f.read().strip('\n'))
+        except Exception as e:
+            print(e)
+            return 0
 
 
 class MyMysql(object):
@@ -107,21 +129,21 @@ class MyMysql(object):
         if self.search_info(user_info.get("username")):
             return
         jike_user = JikeUser(
-            username=user_info.get("username"),
-            briefIntro=user_info.get("briefIntro"),
-            city=user_info.get('city'),
-            country=user_info.get('country'),
-            createdAt=user_info.get('createdAt'),
+            username=user_info.get("username") if user_info.get("username") else '',
+            briefIntro=user_info.get("briefIntro") if user_info.get("briefIntro") else '',
+            city=user_info.get('city') if user_info.get('city') != 'None' else '',
+            country=user_info.get('country') if user_info.get('country') != 'None' else '',
+            createdAt=user_info.get('createdAt') if user_info.get('createdAt') else '',
             create_at_int=self.convert_time(user_info.get('createdAt')),
-            gender=user_info.get('gender'),
-            isVerified=1 if user_info.get('isVerified') else 0,
-            profileImageUrl=user_info.get('profileImageUrl'),
-            province=user_info.get('province'),
-            ref=user_info.get('ref'),
-            screenName=user_info.get('screenName'),
-            updatedAt=user_info.get('updatedAt'),
+            gender=user_info.get('gender') if user_info.get('gender') else '',
+            isVerified=1 if user_info.get('isVerified') != 'False' else 0,
+            profileImageUrl=user_info.get('profileImageUrl') if user_info.get('profileImageUrl') else '',
+            province=user_info.get('province') if user_info.get('province') != 'None' else '',
+            ref=user_info.get('ref') if user_info.get('ref') else '',
+            screenName=user_info.get('screenName') if user_info.get('screenName') else '',
+            updatedAt=user_info.get('updatedAt') if user_info.get('updatedAt') else '',
             update_at_int=self.convert_time(user_info.get('update_at_int')),
-            verifyMessage=user_info.get('verifyMessage')
+            verifyMessage=user_info.get('verifyMessage') if user_info.get('verifyMessage') else ''
         )
         try:
             session = self.Session()
@@ -134,31 +156,37 @@ class MyMysql(object):
         us = []
         for user_info in users:
             jike_user = JikeUser(
-                username=user_info.get("username"),
-                briefIntro=user_info.get("briefIntro"),
-                city=user_info.get('city'),
-                country=user_info.get('country'),
-                createdAt=user_info.get('createdAt'),
+                username=user_info.get("username") if user_info.get("username") else '',
+                briefIntro=user_info.get("briefIntro") if user_info.get("briefIntro") else '',
+                city=user_info.get('city') if user_info.get('city') != 'None' else '',
+                country=user_info.get('country') if user_info.get('country') != 'None' else '',
+                createdAt=user_info.get('createdAt') if user_info.get('createdAt') else '',
                 create_at_int=self.convert_time(user_info.get('createdAt')),
-                gender=user_info.get('gender'),
-                isVerified=1 if user_info.get('isVerified') else 0,
-                profileImageUrl=user_info.get('profileImageUrl'),
-                province=user_info.get('province'),
-                ref=user_info.get('ref'),
-                screenName=user_info.get('screenName'),
-                updatedAt=user_info.get('updatedAt'),
+                gender=user_info.get('gender') if user_info.get('gender') else '',
+                isVerified=1 if user_info.get('isVerified') != 'False' else 0,
+                profileImageUrl=user_info.get('profileImageUrl') if user_info.get('profileImageUrl') else '',
+                province=user_info.get('province') if user_info.get('province') != 'None' else '',
+                ref=user_info.get('ref') if user_info.get('ref') else '',
+                screenName=user_info.get('screenName') if user_info.get('screenName') else '',
+                updatedAt=user_info.get('updatedAt') if user_info.get('updatedAt') else '',
                 update_at_int=self.convert_time(user_info.get('update_at_int')),
-                verifyMessage=user_info.get('verifyMessage')
+                verifyMessage=user_info.get('verifyMessage') if user_info.get('verifyMessage') else ''
             )
             us.append(jike_user)
         try:
+
             session = self.Session()
             session.add_all(us)
             session.commit()
-            print('add success {}'.format("/".join([u.get("username") for u in users])))
+            # print('add success {}'.format("/".join([u.get("username") for u in users])))
         except Exception as e:
             with open('error.log', 'a+') as f:
-                f.write(str(e))
+                f.write(str(e) + "\n\n\n")
+
+    def get_all_users(self):
+        session = self.Session()
+        for user in session.query(JikeUser).all():
+            yield user
 
     def search_info(self, username):
         session = self.Scoped_session()
@@ -171,38 +199,11 @@ class MyMysql(object):
 if __name__ == '__main__':
     mr = MyRedis()
     mm = MyMysql()
-    count = 0
+    # for user in mm.get_all_users():
+    #     print(mr.rds.delete(user.username + "_user_info"))
     us = []
-    for u in mr.get_all_user_info():
-        if count < 10:
-            us.append(u)
-        else:
-            mm.dom_users_info(us)
-            count = 0
-            us = []
-        # mm.dom_user_info(u)
-    # follower_queue = Queue()
-    # count = 0
-    # pipe = mr.rds.pipeline()
-    # for follower in mr.get_follower(START_USERNAME):
-    #     # follower_queue.put(mr.get_info(follower))
-    #     pipe.sadd('jike_users', follower)
-    #     count += 1
-    #     for sec_follower in mr.get_follower(follower):
-    #         pipe.sadd('jike_uesrs', sec_follower)
-    #         # follower_queue.put(mr.get_info(sec_follower))
-    #         count += 1
-    # pipe.execute()
-    # print(count)
-
-    # print("now queue size {}".format(follower_queue.qsize()))
-
-    # for i in range(10):
-    #     t = Thread(target=mm.dom_info_with_queue, args=(follower_queue, ))
-    #     t.start()
-    #
-    # while not follower_queue.empty():
-    #     continue
+    for results in mr.get_all_username():
+        mm.dom_users_info(results)
 
 
 
