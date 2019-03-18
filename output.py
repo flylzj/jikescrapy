@@ -85,6 +85,10 @@ class MyRedis(object):
         user_info_hash_key = REDIS_KEYS.get("user_info_hash_key").format(username)
         return self.rds.hgetall(user_info_hash_key)
 
+    def get_all_user_info(self):
+        for user in self.rds.keys(r'*user_info'):
+            yield self.rds.hgetall(user)
+
 
 class MyMysql(object):
     def __init__(self):
@@ -100,6 +104,8 @@ class MyMysql(object):
             return 0
 
     def dom_user_info(self, user_info):
+        if self.search_info(user_info.get("username")):
+            return
         jike_user = JikeUser(
             username=user_info.get("username"),
             briefIntro=user_info.get("briefIntro"),
@@ -108,7 +114,7 @@ class MyMysql(object):
             createdAt=user_info.get('createdAt'),
             create_at_int=self.convert_time(user_info.get('createdAt')),
             gender=user_info.get('gender'),
-            isVerified=user_info.get('isVerified'),
+            isVerified=1 if user_info.get('isVerified') else 0,
             profileImageUrl=user_info.get('profileImageUrl'),
             province=user_info.get('province'),
             ref=user_info.get('ref'),
@@ -124,32 +130,35 @@ class MyMysql(object):
         except Exception as e:
             print(e)
 
-    def dom_info_thread(self, user_info):
-        if self.search_info(user_info.get("username")):
-            return
-        jike_user = JikeUser(
-            username=user_info.get("username"),
-            briefIntro=user_info.get("briefIntro"),
-            city=user_info.get('city'),
-            country=user_info.get('country'),
-            createdAt=user_info.get('createdAt'),
-            create_at_int=self.convert_time(user_info.get('createdAt')),
-            gender=user_info.get('gender'),
-            isVerified=user_info.get('isVerified'),
-            profileImageUrl=user_info.get('profileImageUrl'),
-            province=user_info.get('province'),
-            ref=user_info.get('ref'),
-            screenName=user_info.get('screenName'),
-            updatedAt=user_info.get('updatedAt'),
-            update_at_int=self.convert_time(user_info.get('update_at_int')),
-            verifyMessage=user_info.get('verifyMessage')
-        )
+    def dom_users_info(self, users):
+        us = []
+        for user_info in users:
+            jike_user = JikeUser(
+                username=user_info.get("username"),
+                briefIntro=user_info.get("briefIntro"),
+                city=user_info.get('city'),
+                country=user_info.get('country'),
+                createdAt=user_info.get('createdAt'),
+                create_at_int=self.convert_time(user_info.get('createdAt')),
+                gender=user_info.get('gender'),
+                isVerified=1 if user_info.get('isVerified') else 0,
+                profileImageUrl=user_info.get('profileImageUrl'),
+                province=user_info.get('province'),
+                ref=user_info.get('ref'),
+                screenName=user_info.get('screenName'),
+                updatedAt=user_info.get('updatedAt'),
+                update_at_int=self.convert_time(user_info.get('update_at_int')),
+                verifyMessage=user_info.get('verifyMessage')
+            )
+            us.append(jike_user)
         try:
-            session = self.Scoped_session()
-            session.add(jike_user)
+            session = self.Session()
+            session.add_all(us)
             session.commit()
+            print('add success {}'.format("/".join([u.get("username") for u in users])))
         except Exception as e:
-            return user_info.get("username")
+            with open('error.log', 'a+') as f:
+                f.write(str(e))
 
     def search_info(self, username):
         session = self.Scoped_session()
@@ -158,29 +167,33 @@ class MyMysql(object):
         ).first()
         return user
 
-    def dom_info_with_queue(self, follower_queue):
-        while not follower_queue.empty():
-            print("now queue size {}".format(follower_queue.qsize()))
-            info = follower_queue.get()
-            self.dom_info_thread(info)
-
 
 if __name__ == '__main__':
     mr = MyRedis()
-    # mm = MyMysql()
-    # follower_queue = Queue()
+    mm = MyMysql()
     count = 0
-    pipe = mr.rds.pipeline()
-    for follower in mr.get_follower(START_USERNAME):
-        # follower_queue.put(mr.get_info(follower))
-        pipe.sadd('jike_users', follower)
-        count += 1
-        for sec_follower in mr.get_follower(follower):
-            pipe.sadd('jike_uesrs', sec_follower)
-            # follower_queue.put(mr.get_info(sec_follower))
-            count += 1
-    pipe.execute()
-    print(count)
+    us = []
+    for u in mr.get_all_user_info():
+        if count < 10:
+            us.append(u)
+        else:
+            mm.dom_users_info(us)
+            count = 0
+            us = []
+        # mm.dom_user_info(u)
+    # follower_queue = Queue()
+    # count = 0
+    # pipe = mr.rds.pipeline()
+    # for follower in mr.get_follower(START_USERNAME):
+    #     # follower_queue.put(mr.get_info(follower))
+    #     pipe.sadd('jike_users', follower)
+    #     count += 1
+    #     for sec_follower in mr.get_follower(follower):
+    #         pipe.sadd('jike_uesrs', sec_follower)
+    #         # follower_queue.put(mr.get_info(sec_follower))
+    #         count += 1
+    # pipe.execute()
+    # print(count)
 
     # print("now queue size {}".format(follower_queue.qsize()))
 

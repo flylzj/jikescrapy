@@ -8,7 +8,7 @@ base = declarative_base()
 
 
 class JikeUser(base):
-    __tablename__ = 'jike_user'
+    __tablename__ = 'jike_user_2'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     jike_id = Column(String(64), nullable=False, default="")
