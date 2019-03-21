@@ -20,6 +20,6 @@ services:
     volumes:
       - .:/jikescrapy
 
-    command: ["scrapy", "crawl", "jike_user", "--logfile=jike_fan.log"]
+    command: ["scrapy", "crawl", "jike_user", "--logfile=jike_user.log"]
   redis:
     image: redis:latest
