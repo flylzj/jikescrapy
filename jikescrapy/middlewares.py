@@ -46,11 +46,18 @@ class JikescrapyDownloadMiddleware(object):
             return False
 
     def process_request(self, request, spider):
-        request.headers.update(
-            {
-                "x-jike-access-token": self.token.get("x-jike-access-token")
-            }
-        )
+        if spider.name == 'jike_fan':
+            request.headers.update(
+                {
+                    "x-jike-access-token": self.rds.hget(REDIS_KEYS.get('user_info_key'), 'x-jike-access-token')
+                }
+            )
+        else:
+            request.headers.update(
+                {
+                    "x-jike-access-token": self.token.get("x-jike-access-token")
+                }
+            )
 
     def process_response(self, request, response, spider):
         if response.status != 200:
