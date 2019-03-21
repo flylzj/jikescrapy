@@ -60,6 +60,8 @@ class JikescrapyDownloadMiddleware(object):
             )
 
     def process_response(self, request, response, spider):
+        if spider == 'jike_fan' and response.status != 200:
+            spider.logger.warning(response.text)
         if response.status != 200:
             spider.logger.info('token过期,正在尝试刷新token')
             self.refresh_token()
