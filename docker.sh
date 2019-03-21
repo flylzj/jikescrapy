@@ -1,0 +1,1 @@
+docker build --rm -t jikescrapy:0.1 . && docker-compose up -d

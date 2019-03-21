@@ -2,6 +2,20 @@ version: 3.0
 
 services:
   fan:
-    build:
-      dockerfile: ./Dockerfile
-      context: .
+    image: scrapy:jike
+    depends_on:
+      - redis
+    volumes:
+      - .:/jikescrapy
+
+    command: ["scrapy", "crawl", "jike_fan", "--logfile=jike_fan.log"]
+  user:
+    image: scrapy:jike
+    depends_on:
+      - redis
+    volumes:
+      - .:/jikescrapy
+
+    command: ["scrapy", "crawl", "jike_user", "--logfile=jike_fan.log"]
+  redis:
+    image: redis:latest

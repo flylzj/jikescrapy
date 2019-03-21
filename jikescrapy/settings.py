@@ -24,20 +24,21 @@ mysql_config = {
 MYSQL_URI = 'mysql+pymysql://{username}:{password}@{host}:{port}/{database}'.format(**mysql_config)
 
 
-REDIS_CONFIG = {
-    "host": "120.24.66.220",
-    "port": "6379",
-    'password': 'lzjlzj123',
-    "db": 0,
-    "decode_responses": True,
-    "encoding": "utf-8"
-}
-
 # REDIS_CONFIG = {
+#     "host": "120.24.66.220",
+#     "port": "6379",
+#     'password': 'lzjlzj123',
 #     "db": 0,
 #     "decode_responses": True,
 #     "encoding": "utf-8"
 # }
+
+REDIS_CONFIG = {
+    "host": "redis",
+    "db": 0,
+    "decode_responses": True,
+    "encoding": "utf-8"
+}
 
 BOT_NAME = 'jikescrapy'
 
