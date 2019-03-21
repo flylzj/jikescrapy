@@ -19,23 +19,16 @@ class JikeFanSpider(scrapy.Spider):
     father_username = '6ef2cacc-f140-4e75-a60c-686808ef7c2b'
 
     def start_requests(self):
-        jike = JIKE()
-        if not jike.token:
-            pass
-        else:
-            self.rds.set(REDIS_KEYS.get("token_key"), str(jike.token))
-        users = self.rds.sdiff(REDIS_KEYS.get('jike_users_key'), REDIS_KEYS.get('robot_following_key'))
-
+        users = self.rds.zrangebyscore(REDIS_KEYS.get('robot_following_key'), 1, 1, start=0, num=1)
         if not users:
             self.logger.info('no data now')
             username = self.father_username
         else:
-            username = choice(list(users))
+            username = users[0]
 
         data = {
             "username": username
         }
-        self.rds.sadd(REDIS_KEYS.get('robot_following_key'), username)
         yield scrapy.Request(
             self.follow_api,
             method='POST',
@@ -51,18 +44,18 @@ class JikeFanSpider(scrapy.Spider):
         meta = response.meta
         if result.get('success'):
             self.logger.info('follow user {} success'.format(meta.get('username')))
-        users = self.rds.sdiff(REDIS_KEYS.get('jike_users_key'), REDIS_KEYS.get('robot_following_key'))
+            self.rds.zincrby(REDIS_KEYS.get('robot_following_key'), -1, meta.get('username'))
+        users = self.rds.zrangebyscore(REDIS_KEYS.get('robot_following_key'), 1, 1, start=0, num=1)
 
         if not users:
             self.logger.info('no data now')
             username = self.father_username
         else:
-            username = choice(list(users))
+            username = users[0]
 
         data = {
             "username": username
         }
-        self.rds.sadd(REDIS_KEYS.get('robot_following_key'), username)
         yield scrapy.Request(
             self.follow_api,
             method='POST',

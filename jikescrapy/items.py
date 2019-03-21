@@ -20,3 +20,4 @@ class JikeUserItem(scrapy.Item):
     username = scrapy.Field()
     verifyMessage = scrapy.Field()
     follow_key = scrapy.Field()
+    verify_follow_key = scrapy.Field()

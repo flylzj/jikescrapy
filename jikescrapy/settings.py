@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 REDIS_KEYS = {
     "token_key": "jike_token",
-    "follower_key": "{}_follower",
-    "following_key": "{}_following",
+    "follower_key": ("{}_follower", "{}_verify_follower"),
+    "following_key": ("{}_following", "{}_verify_following"),
     "jike_users_key": "jike_users",
     "crawling_user_key": "crawling_user",
     "robot_following_key": "robot_following",
@@ -10,7 +10,7 @@ REDIS_KEYS = {
     "user_info_hash_key": "{}_user_info",
     "more_key_key": "jike_more_key",
     "user_more_key": "{}_more_key",
-    "finished_user": "finished_user"
+    "finished_user": "finished_user",
 }
 
 mysql_config = {
@@ -33,13 +33,20 @@ REDIS_CONFIG = {
     "encoding": "utf-8"
 }
 
+# REDIS_CONFIG = {
+#     "db": 0,
+#     "decode_responses": True,
+#     "encoding": "utf-8"
+# }
+
 BOT_NAME = 'jikescrapy'
 
+# LOG_LEVEL = 'DEBUG'
 LOG_LEVEL = 'INFO'
 
 FEED_EXPORT_ENCODING = 'utf-8'
 
-DOWNLOAD_DELAY = 0.5  # 相同域名下载延时
+DOWNLOAD_DELAY = 3  # 相同域名下载延时
 
 SPIDER_MODULES = ['jikescrapy.spiders']
 NEWSPIDER_MODULE = 'jikescrapy.spiders'
@@ -55,4 +62,4 @@ DOWNLOADER_MIDDLEWARES = {
 }
 
 START_USERNAME = '82D23B32-CF36-4C59-AD6F-D05E3552CBF3'
-JIKE_DEPTH = 0
+JIKE_DEPTH = 2

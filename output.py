@@ -1,73 +1,39 @@
 # coding: utf-8
-from jikescrapy.settings import REDIS_CONFIG, REDIS_KEYS, START_USERNAME, MYSQL_URI
+from jikescrapy.settings import REDIS_CONFIG, REDIS_KEYS, MYSQL_URI
 import redis
-from py2neo import Database, Graph, NodeMatcher
+from py2neo import  Graph, NodeMatcher
 from py2neo.data import Node, Relationship
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from model import JikeUser
 import time
+import csv
+import re
 
 
 class MyGraph(object):
     def __init__(self):
         self.graph = Graph('bolt://localhost:7687', user='neo4j', password='lzjlzj123')
         self.mather = NodeMatcher(self.graph)
-        pool = redis.ConnectionPool(**REDIS_CONFIG)
-        self.rds = redis.StrictRedis(connection_pool=pool)
-        self.username, self.screenName = self.get_main_user_info()
-        self.user_info = {
-            "username": self.username,
-            "screenName": self.screenName
-        }
         self.node_name = 'JIKE_user'
+        self.FOLLOWER_REL = 'FOLLOWER'
+        self.FOLLOWING_REL = 'FOLLOWING'
 
-    def get_main_user_info(self):
-        # return self.rds.hget(REDIS_KEYS.get('user_info_key'), 'username'),\
-        #        self.rds.hget(REDIS_KEYS.get('user_info_key'), 'screenName')
-        return '82D23B32-CF36-4C59-AD6F-D05E3552CBF3', '瓦恁'
+    def add_a_rel(self, node_a, node_b, rel_type='FOLLOWER'):
+        ab = Relationship(node_a, rel_type, node_b)
+        self.graph.create(ab)
 
-    def get_followers(self, username):
-        follower_key = REDIS_KEYS.get('follower_key').format(username)
-        followers = self.rds.hgetall(follower_key)
-        for k, v in followers.items():
-            yield k, eval(v)
+    def add_a_person(self, user):
+        if self.search_a_person(username=user.username):
+            return
+        node = Node(self.node_name, **user.to_dict())
+        self.graph.create(node)
 
-    def dump_key(self, follower_key):
-        self.rds.dump(follower_key)
+    def search_a_person(self, **properties):
+        return self.mather.match(self.node_name, **properties).first()
 
     def flush(self):
         self.graph.delete_all()
-
-    def push_into_graph(self, user_info):
-        tx = self.graph.begin()
-        username = user_info.get('username')
-        screenName = user_info.get('screenName')
-        if not self.mather.match(self.node_name, name=screenName):
-            root_node = Node(self.node_name, name=screenName)
-            tx.create(root_node)
-        else:
-            root_node = self.mather.match(self.node_name, name=screenName).first()
-        for k, v in self.get_followers(username):
-            if not self.mather.match(self.node_name, name=v.get('screenName')):
-                node = Node(self.node_name, name=v.get('screenName'))
-                print('my create', node)
-                tx.create(node)
-            else:
-                node = self.mather.match(self.node_name, name=v.get('screenName')).first()
-                print(node)
-            tx.create(Relationship(node, 'FOLLOWER', root_node))
-        tx.commit()
-
-    def dump(self):
-        self.push_into_graph(self.user_info)
-        for k, v in self.get_followers(self.username):
-            self.push_into_graph(
-                {
-                    "username": k,
-                    "screenName": v.get('screenName')
-                }
-            )
 
 
 class MyRedis(object):
@@ -75,41 +41,17 @@ class MyRedis(object):
         pool = redis.ConnectionPool(**REDIS_CONFIG)
         self.rds = redis.StrictRedis(connection_pool=pool)
 
-    def get_follower(self, username):
-        follower_key = REDIS_KEYS.get('follower_key').format(username)
-        followers = self.rds.smembers(follower_key)
-        for follower in followers:
-            yield follower
+    def get_has_follow(self):
+        for username in self.rds.scan_iter('*follow*'):
+            yield re.split(r'_follow.*', username)[0], re.search(r'follow.*', username).group()
+            # yield username.split("_")[0], username.split("_")[1]
 
-    def get_info(self, username):
-        user_info_hash_key = REDIS_KEYS.get("user_info_hash_key").format(username)
-        user_info = self.rds.hgetall(user_info_hash_key)
-        return user_info
-
-    def get_all_username(self):
-        cur = self.load_cur()
-        print(cur)
-        cur, results = self.rds.scan(cur, match='*user_info', count=10)
-        yield [self.get_info(username.strip("_user_info")) for username in results]
-        while cur != 0:
-            self.dom_cur(cur)
-            cur, results = self.rds.scan(cur, match='*user_info', count=10)
-            results = [self.get_info(username.strip("_user_info")) for username in results]
-            yield [result for result in results if result]
-
-    @staticmethod
-    def dom_cur(cur):
-        with open('cur', 'w') as f:
-            f.write(str(cur))
-
-    @staticmethod
-    def load_cur():
-        try:
-            with open('cur') as f:
-                return int(f.read().strip('\n'))
-        except Exception as e:
-            print(e)
-            return 0
+    def get_follow(self, username, follow_type="follower"):
+        if follow_type != 'follower' and follow_type != 'following':
+            print(username, follow_type)
+        follow_key = REDIS_KEYS.get('{}_key'.format(follow_type))[0].format(username)
+        for follow_user in self.rds.sscan_iter(follow_key):
+            yield follow_user
 
 
 class MyMysql(object):
@@ -125,85 +67,90 @@ class MyMysql(object):
         except Exception as e:
             return 0
 
-    def dom_user_info(self, user_info):
-        if self.search_info(user_info.get("username")):
-            return
-        jike_user = JikeUser(
-            username=user_info.get("username") if user_info.get("username") else '',
-            briefIntro=user_info.get("briefIntro") if user_info.get("briefIntro") else '',
-            city=user_info.get('city') if user_info.get('city') != 'None' else '',
-            country=user_info.get('country') if user_info.get('country') != 'None' else '',
-            createdAt=user_info.get('createdAt') if user_info.get('createdAt') else '',
-            create_at_int=self.convert_time(user_info.get('createdAt')),
-            gender=user_info.get('gender') if user_info.get('gender') else '',
-            isVerified=1 if user_info.get('isVerified') != 'False' else 0,
-            profileImageUrl=user_info.get('profileImageUrl') if user_info.get('profileImageUrl') else '',
-            province=user_info.get('province') if user_info.get('province') != 'None' else '',
-            ref=user_info.get('ref') if user_info.get('ref') else '',
-            screenName=user_info.get('screenName') if user_info.get('screenName') else '',
-            updatedAt=user_info.get('updatedAt') if user_info.get('updatedAt') else '',
-            update_at_int=self.convert_time(user_info.get('update_at_int')),
-            verifyMessage=user_info.get('verifyMessage') if user_info.get('verifyMessage') else ''
-        )
-        try:
-            session = self.Session()
-            session.add(jike_user)
-            session.commit()
-        except Exception as e:
-            print(e)
-
-    def dom_users_info(self, users):
-        us = []
-        for user_info in users:
-            jike_user = JikeUser(
-                username=user_info.get("username") if user_info.get("username") else '',
-                briefIntro=user_info.get("briefIntro") if user_info.get("briefIntro") else '',
-                city=user_info.get('city') if user_info.get('city') != 'None' else '',
-                country=user_info.get('country') if user_info.get('country') != 'None' else '',
-                createdAt=user_info.get('createdAt') if user_info.get('createdAt') else '',
-                create_at_int=self.convert_time(user_info.get('createdAt')),
-                gender=user_info.get('gender') if user_info.get('gender') else '',
-                isVerified=1 if user_info.get('isVerified') != 'False' else 0,
-                profileImageUrl=user_info.get('profileImageUrl') if user_info.get('profileImageUrl') else '',
-                province=user_info.get('province') if user_info.get('province') != 'None' else '',
-                ref=user_info.get('ref') if user_info.get('ref') else '',
-                screenName=user_info.get('screenName') if user_info.get('screenName') else '',
-                updatedAt=user_info.get('updatedAt') if user_info.get('updatedAt') else '',
-                update_at_int=self.convert_time(user_info.get('update_at_int')),
-                verifyMessage=user_info.get('verifyMessage') if user_info.get('verifyMessage') else ''
-            )
-            us.append(jike_user)
-        try:
-
-            session = self.Session()
-            session.add_all(us)
-            session.commit()
-            # print('add success {}'.format("/".join([u.get("username") for u in users])))
-        except Exception as e:
-            with open('error.log', 'a+') as f:
-                f.write(str(e) + "\n\n\n")
-
-    def get_all_users(self):
-        session = self.Session()
-        for user in session.query(JikeUser).all():
-            yield user
-
     def search_info(self, username):
         session = self.Scoped_session()
         user = session.query(JikeUser).filter_by(
             username=username
         ).first()
+        session.close()
         return user
+
+    def get_all_users(self):
+        session = self.Scoped_session()
+        for user in session.query(JikeUser).yield_per(1):
+            yield user
+
+
+class MyController():
+    def __init__(self):
+        self.mg = MyGraph()
+        self.mr = MyRedis()
+        self.mm = MyMysql()
+
+    def dom_all_users(self):
+        for user in self.mm.get_all_users():
+            self.mg.add_a_person(user)
+
+    def dom_relationship(self):
+        for username, follow_type in self.mr.get_has_follow():
+            for follow_username in self.mr.get_follow(username, follow_type):
+                user_node = self.mg.search_a_person(username=username)
+                follow_node = self.mg.search_a_person(username=follow_username)
+                if not user_node or not follow_node:
+                    with open("error.log", "a+", encoding='utf-8') as f:
+                        f.write("{}{}{}".format(username, follow_type, follow_username))
+                    continue
+                if follow_type == 'follower':
+                    self.mg.add_a_rel(follow_node, user_node, self.mg.FOLLOWER_REL)
+                else:
+                    self.mg.add_a_rel(user_node, follow_node, self.mg.FOLLOWING_REL)
+
+    def dump_user_to_csv(self):
+        headers = [":ID", "id", "name", "username", "isVerified", "gender", "screenName", "create_at_int", ":LABEL"]
+        with open('node.csv', 'a+', encoding='utf-8', newline='') as f:
+            writer = csv.DictWriter(f, headers)
+            writer.writeheader()
+            for user in self.mm.get_all_users():
+                writer.writerow(user.to_dict())
+
+    def dump_relationship_to_csv(self):
+        headers = ["user1", "rel", "user2"]
+        follower_writer = csv.DictWriter(open('follower.csv', "a+", encoding='utf-8', newline=''), headers)
+        follower_writer.writeheader()
+        following_writer = csv.DictWriter(open('following.csv', "a+", encoding='utf-8', newline=''), headers)
+        following_writer.writeheader()
+        for username, follow_type in self.mr.get_has_follow():
+            for follow_username in self.mr.get_follow(username, follow_type):
+                # user_node = self.mg.search_a_person(username=username)
+                # follow_node = self.mg.search_a_person(username=follow_username)
+                # if not user_node or not follow_node:
+                #     with open("error.log", "a+", encoding='utf-8') as f:
+                #         f.write("{}{}{}".format(username, follow_type, follow_username))
+                #     continue
+
+                if follow_type == 'follower':
+                    follower_writer.writerow(
+                            {
+                                "user1": username,
+                                "rel": self.mg.FOLLOWER_REL,
+                                "user2": follow_username
+                            }
+                        )
+                    # self.mg.add_a_rel(follow_node, user_node, self.mg.FOLLOWER_REL)
+                else:
+                    following_writer.writerow(
+                            {
+                                "user2": username,
+                                "rel": self.mg.FOLLOWING_REL,
+                                "user1": follow_username
+                            }
+                        )
+                    # self.mg.add_a_rel(user_node, follow_node, self.mg.FOLLOWING_REL)
 
 
 if __name__ == '__main__':
-    mr = MyRedis()
-    mm = MyMysql()
-    # for user in mm.get_all_users():
-    #     print(mr.rds.delete(user.username + "_user_info"))
-    us = []
-    for results in mr.get_all_username():
-        mm.dom_users_info(results)
-
+    mc = MyController()
+    # mc.dom_all_users()
+    mc.dump_relationship_to_csv()
 
 

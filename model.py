@@ -28,6 +28,19 @@ class JikeUser(base):
     update_at_int = Column(Integer, nullable=False, default=0)
     verifyMessage = Column(String(256), nullable=False, default="")  # 认证信息
 
+    def to_dict(self):
+        return {
+            ":ID": self.id,
+            "id": self.id,
+            "name": self.screenName,
+            "username": self.username,
+            "isVerified": self.isVerified,
+            "gender": self.gender,
+            "screenName": self.screenName,
+            "create_at_int": self.create_at_int,
+            ":LABEL": "JIKE_USER"
+        }
+
 
 if __name__ == '__main__':
     engine = create_engine(MYSQL_URI)

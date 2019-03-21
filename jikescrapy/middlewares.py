@@ -22,6 +22,10 @@ class JikescrapyDownloadMiddleware(object):
         for k, v in self.profile.get('user').items():
             if k in keys:
                 self.rds.hsetnx(user_info_key, k, v)
+        keys = ['x-jike-refresh-token', 'x-jike-access-token', 'token']
+        for k, v in self.token.items():
+            if k in keys:
+                self.rds.hsetnx(user_info_key, k, v)
 
     def refresh_token(self):
         try:
@@ -55,5 +59,8 @@ class JikescrapyDownloadMiddleware(object):
             if not self.token:
                 spider.logger.error('刷新token失败,请重新登录')
                 spider.close(spider, 'login error')
+            else:
+                spider.logger.info('刷新token成功')
+                self.load_user_info()
             return request
         return response
