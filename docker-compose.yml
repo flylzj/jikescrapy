@@ -2,7 +2,9 @@ version: "3.0"
 
 services:
   fan:
-    image: scrapy:jike
+    build:
+      context: .
+      dockerfile: Dockerfile
     depends_on:
       - redis
     volumes:
@@ -10,7 +12,9 @@ services:
 
     command: ["scrapy", "crawl", "jike_fan", "--logfile=jike_fan.log"]
   user:
-    image: scrapy:jike
+    build:
+      context: .
+      dockerfile: Dockerfile
     depends_on:
       - redis
     volumes:
