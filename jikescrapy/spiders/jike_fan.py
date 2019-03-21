@@ -19,6 +19,9 @@ class JikeFanSpider(scrapy.Spider):
     father_username = '6ef2cacc-f140-4e75-a60c-686808ef7c2b'
 
     def start_requests(self):
+        user_info_key = REDIS_KEYS.get('user_info_key')
+        userinfo = self.rds.hgetall(user_info_key)
+        self.logger.info('username: {}\nscreenName: {}'.format(userinfo.get('username'), userinfo.get('screenName')))
         users = self.rds.zrangebyscore(REDIS_KEYS.get('robot_following_key'), 1, 1, start=0, num=1)
         if not users:
             self.logger.info('no data now')
