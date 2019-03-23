@@ -13,15 +13,18 @@ class JikeFanDownloadMiddleware(object):
         self.rds = redis.StrictRedis(connection_pool=pool)
 
     def process_request(self, request, spider):
+        token = self.rds.hget(REDIS_KEYS.get('user_info_key'), 'x-jike-access-token')
+        spider.logger.info(token)
         request.headers.update(
             {
-                "x-jike-access-token": self.rds.hget(REDIS_KEYS.get('user_info_key'), 'x-jike-access-token')
+                "x-jike-access-token": token
             }
         )
 
     def process_response(self, request, response, spider):
         if response.status != 200:
             spider.logger.warning(response.text)
+            return request
         return response
 
 
@@ -66,18 +69,11 @@ class JikescrapyDownloadMiddleware(object):
             return False
 
     def process_request(self, request, spider):
-        if spider.name == 'jike_fan':
-            request.headers.update(
-                {
-                    "x-jike-access-token": self.rds.hget(REDIS_KEYS.get('user_info_key'), 'x-jike-access-token')
-                }
-            )
-        else:
-            request.headers.update(
-                {
-                    "x-jike-access-token": self.token.get("x-jike-access-token")
-                }
-            )
+        request.headers.update(
+            {
+                "x-jike-access-token": self.token.get("x-jike-access-token")
+            }
+        )
 
     def process_response(self, request, response, spider):
         if spider == 'jike_fan' and response.status != 200:
