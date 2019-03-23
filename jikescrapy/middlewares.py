@@ -6,7 +6,7 @@ from jike import JIKE
 import logging
 
 
-class JikesFanDownloadMiddleware(object):
+class JikeFanDownloadMiddleware(object):
     def __init__(self):
         pool = redis.ConnectionPool(**REDIS_CONFIG)
         self.rds = redis.StrictRedis(connection_pool=pool)
