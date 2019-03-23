@@ -58,9 +58,6 @@ DEFAULT_REQUEST_HEADERS = {
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:61.0) Gecko/20100101 Firefox/61.0",
 }
 
-DOWNLOADER_MIDDLEWARES = {
-    'jikescrapy.middlewares.JikescrapyDownloadMiddleware': 543,
-}
 
-START_USERNAME = 'dianying' # '82D23B32-CF36-4C59-AD6F-D05E3552CBF3'
-JIKE_DEPTH = 10
+START_USERNAME = 'dianying'  # '82D23B32-CF36-4C59-AD6F-D05E3552CBF3'
+JIKE_DEPTH = 100

@@ -13,6 +13,9 @@ class JikeUserSpider(scrapy.Spider):
     custom_settings = {
         'ITEM_PIPELINES': {
             'jikescrapy.pipelines.JikescrapyPipeline': 100
+        },
+        'DOWNLOADER_MIDDLEWARES': {
+            'jikescrapy.middlewares.JikescrapyDownloadMiddleware': 543,
         }
     }
     follower_api = 'https://app.jike.ruguoapp.com/1.0/userRelation/getFollowerList'

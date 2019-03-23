@@ -9,6 +9,9 @@ from jike import JIKE
 
 class JikeFanSpider(scrapy.Spider):
     custom_settings = {
+        'DOWNLOADER_MIDDLEWARES': {
+            'jikescrapy.middlewares.JikeFanDownloadMiddleware': 543,
+        },
         "DOWNLOAD_DELAY": 3600,
     }
     name = 'jike_fan'
@@ -48,8 +51,9 @@ class JikeFanSpider(scrapy.Spider):
         if result.get('success'):
             self.logger.info('follow user {} success'.format(meta.get('username')))
             self.rds.zincrby(REDIS_KEYS.get('robot_following_key'), -1, meta.get('username'))
+        else:
+            self.logger.warning(response.text)
         users = self.rds.zrangebyscore(REDIS_KEYS.get('robot_following_key'), 1, 1, start=0, num=1)
-
         if not users:
             self.logger.info('no data now')
             username = self.father_username

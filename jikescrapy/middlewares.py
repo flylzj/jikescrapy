@@ -6,6 +6,24 @@ from jike import JIKE
 import logging
 
 
+class JikesFanDownloadMiddleware(object):
+    def __init__(self):
+        pool = redis.ConnectionPool(**REDIS_CONFIG)
+        self.rds = redis.StrictRedis(connection_pool=pool)
+
+    def process_request(self, request, spider):
+        request.headers.update(
+            {
+                "x-jike-access-token": self.rds.hget(REDIS_KEYS.get('user_info_key'), 'x-jike-access-token')
+            }
+        )
+
+    def process_response(self, request, response, spider):
+        if spider == 'jike_fan' and response.status != 200:
+            spider.logger.warning(response.text)
+        return response
+
+
 class JikescrapyDownloadMiddleware(object):
     def __init__(self):
         pool = redis.ConnectionPool(**REDIS_CONFIG)
