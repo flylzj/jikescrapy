@@ -21,7 +21,6 @@ class JikeFanDownloadMiddleware(object):
                 "x-jike-access-token": token
             }
         )
-        spider.logger.info(str(request.headers))
 
     def process_response(self, request, response, spider):
         if response.status != 200:
