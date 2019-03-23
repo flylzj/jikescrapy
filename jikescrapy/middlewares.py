@@ -14,12 +14,14 @@ class JikeFanDownloadMiddleware(object):
 
     def process_request(self, request, spider):
         token = self.rds.hget(REDIS_KEYS.get('user_info_key'), 'x-jike-access-token')
-        spider.logger.info(token)
+        update_time = self.rds.hget(REDIS_KEYS.get('user_info_key'), 'update_time')
+        spider.logger.info('token {}\nupdate_time {}'.format(token, update_time))
         request.headers.update(
             {
                 "x-jike-access-token": token
             }
         )
+        spider.logger.info(str(request.headers))
 
     def process_response(self, request, response, spider):
         if response.status != 200:
