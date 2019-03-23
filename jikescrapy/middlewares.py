@@ -51,6 +51,7 @@ class JikescrapyDownloadMiddleware(object):
             if k in keys:
                 self.rds.hsetnx(user_info_key, k, v)
         self.rds.hsetnx(user_info_key, 'update_time', time.strftime("%Y-%m-%d %H:%M:%S"))
+        logging.info('info写入redis成功')
 
     def refresh_token(self):
         try:
