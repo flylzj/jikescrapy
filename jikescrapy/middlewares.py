@@ -45,12 +45,12 @@ class JikescrapyDownloadMiddleware(object):
         user_info_key = REDIS_KEYS.get('user_info_key')
         for k, v in self.profile.get('user').items():
             if k in keys:
-                self.rds.hsetnx(user_info_key, k, v)
+                self.rds.hset(user_info_key, k, v)
         keys = ['x-jike-refresh-token', 'x-jike-access-token', 'token']
         for k, v in self.token.items():
             if k in keys:
-                self.rds.hsetnx(user_info_key, k, v)
-        self.rds.hsetnx(user_info_key, 'update_time', time.strftime("%Y-%m-%d %H:%M:%S"))
+                self.rds.hset(user_info_key, k, v)
+        self.rds.hset(user_info_key, 'update_time', time.strftime("%Y-%m-%d %H:%M:%S"))
         logging.info('info写入redis成功')
 
     def refresh_token(self):
@@ -72,9 +72,6 @@ class JikescrapyDownloadMiddleware(object):
             return False
 
     def process_request(self, request, spider):
-        token = self.rds.hget(REDIS_KEYS.get('user_info_key'), 'x-jike-access-token')
-        update_time = self.rds.hget(REDIS_KEYS.get('user_info_key'), 'update_time')
-        spider.logger.info('token {}\nupdate_time {}'.format(token, update_time))
         request.headers.update(
             {
                 "x-jike-access-token": self.token.get("x-jike-access-token")
