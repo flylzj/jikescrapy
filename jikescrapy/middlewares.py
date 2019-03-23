@@ -73,13 +73,11 @@ class JikescrapyDownloadMiddleware(object):
     def process_request(self, request, spider):
         request.headers.update(
             {
-                "x-jike-access-token": self.token.get("x-jike-access-token")
+                "x-jike-access-token": self.rds.hget('user_info', 'x-jike-access-token')  # self.token.get("x-jike-access-token")
             }
         )
 
     def process_response(self, request, response, spider):
-        if spider == 'jike_fan' and response.status != 200:
-            spider.logger.warning(response.text)
         if response.status != 200:
             spider.logger.info('token过期,正在尝试刷新token')
             self.refresh_token()
