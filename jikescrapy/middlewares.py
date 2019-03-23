@@ -4,6 +4,7 @@ import redis
 import requests
 from jike import JIKE
 import logging
+import time
 
 
 class JikeFanDownloadMiddleware(object):
@@ -19,7 +20,7 @@ class JikeFanDownloadMiddleware(object):
         )
 
     def process_response(self, request, response, spider):
-        if spider == 'jike_fan' and response.status != 200:
+        if response.status != 200:
             spider.logger.warning(response.text)
         return response
 
@@ -44,6 +45,7 @@ class JikescrapyDownloadMiddleware(object):
         for k, v in self.token.items():
             if k in keys:
                 self.rds.hsetnx(user_info_key, k, v)
+        self.rds.hsetnx(user_info_key, 'update_time', time.strftime("%Y-%m-%d %H:%M:%S"))
 
     def refresh_token(self):
         try:

@@ -123,7 +123,13 @@ class JikeUserSpider(scrapy.Spider):
         # self.set_user_more_key(meta.get('username'), str(more_key))
         if more_key:
             meta['page'] += 1
-            self.logger.info('more {} for {}, now page {}'.format(meta.get('type'), meta.get('username'), meta.get('page')))
+            self.logger.info('more {} for {}, now page {}, now depth {}'.format(
+                meta.get('type'),
+                meta.get('username'),
+                meta.get('page'),
+                meta.get('d')
+                )
+            )
             post_data = {
                 "loadMoreKey": more_key,
                 "username": meta.get('username'),
