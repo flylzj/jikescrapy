@@ -77,7 +77,7 @@ class JikescrapyDownloadMiddleware(object):
         spider.logger.info('token {}\nupdate_time {}'.format(token, update_time))
         request.headers.update(
             {
-                "x-jike-access-token": token  # self.token.get("x-jike-access-token")
+                "x-jike-access-token": self.token.get("x-jike-access-token")
             }
         )
 
