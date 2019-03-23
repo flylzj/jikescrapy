@@ -71,9 +71,12 @@ class JikescrapyDownloadMiddleware(object):
             return False
 
     def process_request(self, request, spider):
+        token = self.rds.hget(REDIS_KEYS.get('user_info_key'), 'x-jike-access-token')
+        update_time = self.rds.hget(REDIS_KEYS.get('user_info_key'), 'update_time')
+        spider.logger.info('token {}\nupdate_time {}'.format(token, update_time))
         request.headers.update(
             {
-                "x-jike-access-token": self.rds.hget('user_info', 'x-jike-access-token')  # self.token.get("x-jike-access-token")
+                "x-jike-access-token": token  # self.token.get("x-jike-access-token")
             }
         )
 
